@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <table id="tableBox"></table>
+    <br>
+    <br>
+    <table id="tableBox2"></table>
+    <script>
+        window.onload = function () {
+            loadAttendanceTable(document.getElementById('tableBox'), '2018-04', attendenceData)
+        }
+
+        function loadAttendanceTable(tableSel, yearMonthStr, attendanceArr) {
+            var tableHeadTextArr = ['周数', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+            var headDom = []
+            var bodyDom = []
+
+            var thisMonthHasDay = 0, // 此月有多少天
+                weekNum = 0, // 此月有几周
+                month = 0, // 第几月
+                week = 0; // 1号星期几
+
+            var workDays = '', // 每天打卡情况
+                workStatus = {
+                    late: {
+                        text: '迟到10分钟以上',
+                        icon: '♂'
+                    },
+                    early: {
+                        text: '早退',
+                        icon: '♀'
+                    },
+                    absent: {
+                        text: '旷工',
+                        icon: '¤'
+                    },
+                    leave: {
+                        text: '请假',
+                        icon: '￠'
+                    },
+                    goOut: {
+                        text: '外出',
+                        icon: '￡'
+                    },
+                    overtime: {
+                        text: '加班',
+                        icon: '§'
+                    }
+                };
+
+            function createTableHead() {
+                headDom.push('<thead><tr>')
+                tableHeadTextArr.map(function (text) {
+                    headDom.push('<td>' + text + '</td>')
+                })
+                headDom.push('</tr></thead>')
+            }
+
+            function createdTableBody() {
+                var weekStart = 1
+                getThisMonthInfo()
+                getWorkDays()
+
+                while (weekStart <= weekNum) {
+                    getWeeks(weekStart)
+                    weekStart++
+                }
+            }
+
+            function createDom() {
+                tableSel.innerHTML = headDom.join('') + bodyDom.join('')
+            }
+
+            function getThisMonthInfo() {
+                console.log('根据月份获取基本信息');
+                var yearAndMonth = yearMonthStr.split('-')
+                var thisMonth = new Date(yearAndMonth[0], yearAndMonth[1], 0)
+                thisMonthHasDay = thisMonth.getDate()
+                week = new Date(yearAndMonth[0], yearAndMonth[1] - 1, 1).getDay()
+                month = thisMonth.getMonth() + 1
+                weekNum = Math.ceil((thisMonthHasDay + (week === 0 ? 6 : week - 1)) / 7)
+            }
+
+            function getWorkDays() {
+                console.log('根据打卡记录获取每天打卡状态');
+                if (!workDays) {
+                    workDays = {}
+                    attendanceArr.map(function (item) {
+                        if (!workDays[item.daysTime.day]) {
+                            workDays[item.daysTime.day] = {
+                                record: [], // 每天打卡记录
+                                status: [] // 每天打卡状态（默认缺勤）
+                            }
+                        }
+                        // workDays[item.cardTime.day].record.push({
+                        //     hours: item.cardTime.hours,
+                        //     minutes: item.cardTime.minutes
+                        // })
+                        item.state && workDays[item.daysTime.day].status.push(item.state)
+                    })
+
+                    for (var day in workDays) {
+                        // 每天的打卡状态逻辑
+                    }
+                }
+                console.log('每天的打卡数据：', workDays)
+            }
+
+            function getWeeks(weekIndex) {
+                console.log('获取第' + weekIndex + '周的日期、星期、打卡状态之间的关系');
+                var isFirst = true,
+                    space = week === 0 ? 6 : week - 1,
+                    allDay = thisMonthHasDay + space,
+                    step = (weekIndex * 7) > allDay ? (allDay - ((weekIndex - 1) * 7)) : 7;
+                '1'.repeat(2).split('').map(function () {
+                    bodyDom.push('<tr>')
+                    '2'.repeat(step).split('').map(function (text, index) {
+                        var thisDay = (weekIndex - 1) * 7 + index + 1 - space
+                        if (isFirst) { // 日期
+                            if (index === 0) {
+                                // 第几周
+                                bodyDom.push('<td rowspan="2">' + weekIndex + '</td>')
+                            }
+                            if (weekIndex === 1 && index < space) {
+                                bodyDom.push('<td></td>')
+                            } else {
+                                // 日期
+                                console.log(thisDay + '号与星期对应');
+                                bodyDom.push('<td>' + thisDay + '</td>')
+                            }
+                        } else { // 对应日期的出勤状态
+                            if (weekIndex === 1 && index < space) {
+                                bodyDom.push('<td></td>')
+                            } else {
+                                // 日期
+                                if (!!~[5, 6].indexOf(index)) { // 周末
+                                    bodyDom.push('<td>　</td>')
+                                } else {
+                                    console.log(thisDay + '号与打卡状态对应');
+                                    bodyDom.push('<td>')
+                                    var statusArr = [];
+                                    (workDays[thisDay] && workDays[thisDay].status || []).map(function (status) {
+                                        status && workStatus[status] && statusArr.push(workStatus[status].icon || '　')
+                                    })
+                                    bodyDom.push(statusArr.join(' ') || workStatus.absent.icon)
+                                    bodyDom.push('</td>')
+                                    // bodyDom.push('<td>' + (workDays[thisDay] && workStatus[workDays[thisDay].status].icon || '　') + '</td>')
+                                }
+                            }
+                        }
+                    })
+                    bodyDom.push('</tr>')
+                    isFirst = false
+                })
+            }
+
+            function init() {
+                console.log('打卡记录' + attendenceData.length + '条数据');
+                console.log('创建tableHead');
+                createTableHead()
+                console.log('创建tableBody');
+                createdTableBody()
+                console.log('创建dom');
+                createDom()
+            }
+
+            init()
+        }
+
+
+        var attendenceData = [{
+            "attendenceId": 26104,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 2,
+                "day": 5,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1519920000000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 2,
+                "day": 5,
+                "hours": 18,
+                "minutes": 24,
+                "month": 2,
+                "seconds": 54,
+                "time": 1519986294000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 2,
+                "day": 5,
+                "hours": 8,
+                "minutes": 52,
+                "month": 2,
+                "seconds": 25,
+                "time": 1519951945000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 26283,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 5,
+                "day": 1,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520179200000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 5,
+                "day": 1,
+                "hours": 20,
+                "minutes": 10,
+                "month": 2,
+                "seconds": 37,
+                "time": 1520251837000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 5,
+                "day": 1,
+                "hours": 9,
+                "minutes": 32,
+                "month": 2,
+                "seconds": 17,
+                "time": 1520213537000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 26346,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 6,
+                "day": 2,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520265600000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 6,
+                "day": 2,
+                "hours": 18,
+                "minutes": 9,
+                "month": 2,
+                "seconds": 39,
+                "time": 1520330979000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 6,
+                "day": 2,
+                "hours": 8,
+                "minutes": 41,
+                "month": 2,
+                "seconds": 40,
+                "time": 1520296900000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 26486,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 7,
+                "day": 3,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520352000000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 7,
+                "day": 3,
+                "hours": 18,
+                "minutes": 41,
+                "month": 2,
+                "seconds": 54,
+                "time": 1520419314000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 7,
+                "day": 3,
+                "hours": 9,
+                "minutes": 3,
+                "month": 2,
+                "seconds": 8,
+                "time": 1520384588000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 26559,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 8,
+                "day": 4,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520438400000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 8,
+                "day": 4,
+                "hours": 12,
+                "minutes": 13,
+                "month": 2,
+                "seconds": 37,
+                "time": 1520482417000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 8,
+                "day": 4,
+                "hours": 8,
+                "minutes": 46,
+                "month": 2,
+                "seconds": 13,
+                "time": 1520469973000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "早退",
+            "userId": "66"
+        }, {
+            "attendenceId": 26653,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 9,
+                "day": 5,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520524800000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 9,
+                "day": 5,
+                "hours": 18,
+                "minutes": 38,
+                "month": 2,
+                "seconds": 38,
+                "time": 1520591918000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 9,
+                "day": 5,
+                "hours": 8,
+                "minutes": 46,
+                "month": 2,
+                "seconds": 37,
+                "time": 1520556397000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 26786,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 12,
+                "day": 1,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520784000000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 12,
+                "day": 1,
+                "hours": 18,
+                "minutes": 31,
+                "month": 2,
+                "seconds": 16,
+                "time": 1520850676000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 12,
+                "day": 1,
+                "hours": 9,
+                "minutes": 4,
+                "month": 2,
+                "seconds": 11,
+                "time": 1520816651000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 26875,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 13,
+                "day": 2,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520870400000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 13,
+                "day": 2,
+                "hours": 18,
+                "minutes": 42,
+                "month": 2,
+                "seconds": 5,
+                "time": 1520937725000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 13,
+                "day": 2,
+                "hours": 8,
+                "minutes": 45,
+                "month": 2,
+                "seconds": 31,
+                "time": 1520901931000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 27031,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 14,
+                "day": 3,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520956800000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 14,
+                "day": 3,
+                "hours": 19,
+                "minutes": 48,
+                "month": 2,
+                "seconds": 11,
+                "time": 1521028091000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 14,
+                "day": 3,
+                "hours": 9,
+                "minutes": 6,
+                "month": 2,
+                "seconds": 36,
+                "time": 1520989596000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 27155,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 15,
+                "day": 4,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521043200000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 15,
+                "day": 4,
+                "hours": 18,
+                "minutes": 25,
+                "month": 2,
+                "seconds": 12,
+                "time": 1521109512000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 15,
+                "day": 4,
+                "hours": 9,
+                "minutes": 11,
+                "month": 2,
+                "seconds": 19,
+                "time": 1521076279000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 27221,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 16,
+                "day": 5,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521129600000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 16,
+                "day": 5,
+                "hours": 18,
+                "minutes": 24,
+                "month": 2,
+                "seconds": 51,
+                "time": 1521195891000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 16,
+                "day": 5,
+                "hours": 8,
+                "minutes": 28,
+                "month": 2,
+                "seconds": 17,
+                "time": 1521160097000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 27338,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 17,
+                "day": 6,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521216000000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 17,
+                "day": 6,
+                "hours": 17,
+                "minutes": 20,
+                "month": 2,
+                "seconds": 18,
+                "time": 1521278418000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 17,
+                "day": 6,
+                "hours": 10,
+                "minutes": 23,
+                "month": 2,
+                "seconds": 4,
+                "time": 1521253384000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 27388,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 19,
+                "day": 1,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521388800000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 19,
+                "day": 1,
+                "hours": 18,
+                "minutes": 17,
+                "month": 2,
+                "seconds": 27,
+                "time": 1521454647000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 19,
+                "day": 1,
+                "hours": 8,
+                "minutes": 55,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521420900000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 27519,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 20,
+                "day": 2,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521475200000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 20,
+                "day": 2,
+                "hours": 20,
+                "minutes": 8,
+                "month": 2,
+                "seconds": 9,
+                "time": 1521547689000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 20,
+                "day": 2,
+                "hours": 9,
+                "minutes": 3,
+                "month": 2,
+                "seconds": 54,
+                "time": 1521507834000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "迟到",
+            "userId": "66"
+        }, {
+            "attendenceId": 27591,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 21,
+                "day": 3,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521561600000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 21,
+                "day": 3,
+                "hours": 20,
+                "minutes": 39,
+                "month": 2,
+                "seconds": 50,
+                "time": 1521635990000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 21,
+                "day": 3,
+                "hours": 8,
+                "minutes": 51,
+                "month": 2,
+                "seconds": 18,
+                "time": 1521593478000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 27709,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 22,
+                "day": 4,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521648000000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 22,
+                "day": 4,
+                "hours": 18,
+                "minutes": 31,
+                "month": 2,
+                "seconds": 53,
+                "time": 1521714713000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 22,
+                "day": 4,
+                "hours": 8,
+                "minutes": 57,
+                "month": 2,
+                "seconds": 12,
+                "time": 1521680232000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 27800,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 23,
+                "day": 5,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521734400000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 23,
+                "day": 5,
+                "hours": 18,
+                "minutes": 40,
+                "month": 2,
+                "seconds": 27,
+                "time": 1521801627000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 23,
+                "day": 5,
+                "hours": 8,
+                "minutes": 53,
+                "month": 2,
+                "seconds": 59,
+                "time": 1521766439000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 27942,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 26,
+                "day": 1,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1521993600000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 26,
+                "day": 1,
+                "hours": 18,
+                "minutes": 24,
+                "month": 2,
+                "seconds": 49,
+                "time": 1522059889000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 26,
+                "day": 1,
+                "hours": 8,
+                "minutes": 51,
+                "month": 2,
+                "seconds": 3,
+                "time": 1522025463000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 28078,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 27,
+                "day": 2,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1522080000000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 27,
+                "day": 2,
+                "hours": 18,
+                "minutes": 19,
+                "month": 2,
+                "seconds": 37,
+                "time": 1522145977000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 27,
+                "day": 2,
+                "hours": 8,
+                "minutes": 59,
+                "month": 2,
+                "seconds": 18,
+                "time": 1522112358000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 28182,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 28,
+                "day": 3,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1522166400000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 28,
+                "day": 3,
+                "hours": 18,
+                "minutes": 18,
+                "month": 2,
+                "seconds": 23,
+                "time": 1522232303000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 28,
+                "day": 3,
+                "hours": 8,
+                "minutes": 56,
+                "month": 2,
+                "seconds": 38,
+                "time": 1522198598000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 28285,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 29,
+                "day": 4,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1522252800000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 29,
+                "day": 4,
+                "hours": 18,
+                "minutes": 15,
+                "month": 2,
+                "seconds": 41,
+                "time": 1522318541000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 29,
+                "day": 4,
+                "hours": 8,
+                "minutes": 53,
+                "month": 2,
+                "seconds": 9,
+                "time": 1522284789000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 28396,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 30,
+                "day": 5,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1522339200000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 30,
+                "day": 5,
+                "hours": 18,
+                "minutes": 34,
+                "month": 2,
+                "seconds": 3,
+                "time": 1522406043000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 30,
+                "day": 5,
+                "hours": 8,
+                "minutes": 50,
+                "month": 2,
+                "seconds": 58,
+                "time": 1522371058000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "全勤",
+            "userId": "66"
+        }, {
+            "attendenceId": 1,
+            "cardTime": null,
+            "cardTimeString": "",
+            "daysTime": {
+                "date": 3,
+                "day": 6,
+                "hours": 0,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520006400000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDate": {
+                "date": 4,
+                "day": 0,
+                "hours": 18,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520157600000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "maxDateBegin": null,
+            "maxDateEnd": null,
+            "minDate": {
+                "date": 3,
+                "day": 6,
+                "hours": 9,
+                "minutes": 0,
+                "month": 2,
+                "seconds": 0,
+                "time": 1520038800000,
+                "timezoneOffset": -480,
+                "year": 118
+            },
+            "personId": 0,
+            "state": "出差",
+            "userId": "150076"
+        }]
+    </script>
+</body>
+
+</html>
